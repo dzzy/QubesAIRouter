@@ -16,6 +16,26 @@ Here’s why it’s awesome:
 - **Isolated Interactions**: These separate VMs communicate only through controlled interfaces (like Qubes qrexec services and API endpoints). There is no direct device or file sharing, which limits lateral movement even if one VM is compromised.
 - **Attack Path Mitigation**: By segregating services, common attack vectors (like DHCP spoofing, DNS poisoning, VPN tunnel compromise) are contained within their respective VMs. An attacker compromising the DNS VM cannot easily pivot to the DHCP VM or to the AI VM, preserving system integrity.
 
+## 🏗️ VM Architecture Overview
+
+| VM Name    | Purpose                                    
+|------------|--------------------------------------------
+| sys-ai     | Inference engine running Ollama + GPU passthrough (Phi3, Mistral, etc.)
+| sys-dev    | Development environment with VS Code, LangChain, scripting tools, API calls to sys-ai
+| sys-config | Stores all configuration files, YAML logs, and historical data in a Git-managed repo
+| sys-logs   | Stores historical logs, change logs, LLM prompts
+| sys-router | Acts as a gateway VM for traffic routing (DHCP, DNS, VPN, VLANs)
+| sys-dns    | Disposable DNS server VM
+| sys-dhcp   | Disposable DHCP server VM
+| sys-vpn     | Disposable VPN VM (optional)
+| sys-firewall| Disposable Firewall VM controlling upstream traffic
+
+### 🧩 Connectivity
+- `sys-dev` sends prompt or code requests to `sys-ai` (Ollama API over port 11434).
+- `sys-dev` pulls config files from `sys-config` using qrexec or qvm-copy.
+- `sys-config` does **not** have direct network access. it’s a secure config storage VM.
+- All VMs’ networking is routed via `sys-router` (with firewall rules managed by `sys-firewall`).
+
 ## Prerequisites
 - You should have a working understanding of Linux and the specific enhancements by the Qubes OS project (Disposable VMs, Templates, etc) 
 
@@ -111,3 +131,15 @@ Here’s why it’s awesome:
 - **Prompt engineering / orchestration**: LangChain, LlamaIndex.
 - **Vector DB**: Qdrant, Milvus.
 - **Anomaly detection**: Use model context + external rules.
+
+configuration steps:
+
+- Clone minimal template for ai-minimal
+qvm-clone fedora-41-minimal sys-ai-minimal
+-disable memory balancing
+
+sudo dnf config-manager addrepo --from-repofile https://developer.download.nvidia.com/compute/cuda/repos/fedora41/x86_64/cuda-fedora41.repo
+sudo dnf clean all
+sudo dnf -y install cuda-toolkit-12-9
+sudo dnf -y install cuda-drivers
+sudo dnf -y install nvidia-smi

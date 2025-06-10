@@ -70,6 +70,10 @@ By carefully managing qrexec services in `dom0`, this AI router architecture mai
   ```bash
   ollama run llama3 "Hello AI Router!"
   ```
+  - Set up MCP (Model Context Protocol) servers to support AI router capabilities, including:
+  - **Log Parsing Server**: Continuously ingests and parses logs from network devices and firewall VMs.
+  - **Prompt Orchestration Server**: Manages structured prompt interactions and coordinates AI queries.
+  - **Context Memory Server**: Stores and retrieves historical context and embeddings to enhance AI responses.
 
 ### Setting Up qrexec Policies and Services ###
 1. **Define Custom qrexec Services:**  
@@ -88,8 +92,7 @@ We’re consolidating logs, DHCP leases, DNS filter lists, firewall rules, route
 - **Disposable service VMs**: Services like DHCP, DNS, VPN, and firewall remain stateless, pulling their configuration from `sys-config` as needed.
 - **Read-only access**: Service VMs can **read** from `sys-config` but cannot **write** to it. This prevents accidental or malicious modification of configuration data.
 - **Version control**: We use Git inside `sys-config` to track changes, enabling easy rollback and history tracking.
-
-This approach removes the need for a separate log VM (`sys-logs`) while improving security and simplicity.
+- Provide access to logs and relevant network data to the MCP server through the `sys-dev` VM, avoiding direct log file sharing or pushing logs between VMs. This ensures logs are exposed securely and controlled via `sys-dev` APIs rather than shared directly to the LLM. This approach removes the need for a separate log VM (`sys-logs`) while improving security and simplicity.
 
 ### 2️⃣ Enable AI Router Capabilities
 - Connect the AI VM (`sys-ai`) to the core Qubes router VM (`sys-router` or equivalent).
@@ -116,6 +119,7 @@ This approach removes the need for a separate log VM (`sys-logs`) while improvin
 - Automate prompt-based analysis and anomaly detection.
 - Possibly deploy:
   - A vector database (like Qdrant or Weaviate) for historical log embeddings.
+  **Note:** Logs and relevant network data are only exposed to the MCP server through the `sys-dev` VM. There is no direct log file sharing or pushing of logs from the service VMs (such as DHCP, DNS, VPN, firewall) to the MCP server. This design ensures that all log access is mediated and controlled via `sys-dev` APIs, maintaining strict security boundaries and minimizing attack surface.
 
 ## 🧩 Possible Tooling Choices
 - **LLM backend**: Ollama, LMDeploy, vLLM.

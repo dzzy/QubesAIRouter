@@ -1,145 +1,172 @@
-# Qubes AI Router Project
+# Qubes AI Router
 
 ## 🌟 Benefits and Philosophy
 
-This project aims to provide a secure, modular, and powerful AI-assisted security router environment built on Qubes OS, blending cutting-edge AI with strong security practices that respect your privacy while delivering powerful automation and analysis capabilities. 
+This project provides a secure, modular, and powerful AI-assisted security router environment built on Qubes OS. It combines cutting-edge AI with strong security practices that respect your privacy while delivering robust automation and analysis capabilities.
 
-Here’s why it’s awesome:
+Key advantages include:
 
-- **Service Separation**: Each core router function (DNS, DHCP, VPN, VLAN, etc.) is assigned to its own VM. This isolates vulnerabilities in one service from affecting others and reduces the exploitability of the system.
-- **Least Privilege by Design**: By splitting services into dedicated VMs, each has only the permissions it needs, which reduces the blast radius of any compromise.
-- **Privacy-First AI**: All AI inference happens locally in isolated VMs, no cloud dependencies.
-- **GPU-Accelerated**: Using PCI passthrough for hardware acceleration ensures fast inference.
-- **Modular Architecture**: The Qubes VM separation ensures that logs, configurations, and AI components stay securely isolated, reducing attack surface.
-- **Anomaly Detection**: Continuous log parsing and contextual analysis can detect suspicious activity in real time.
+- **Service Separation**: Each core router function (DNS, DHCP, VPN, VLAN, etc.) runs in its own VM. This isolates vulnerabilities in one service from affecting others and reduces the system's overall attack surface.
+- **Least Privilege by Design**: Dedicated VMs have only the permissions they need, minimizing the blast radius of any compromise.
+- **Privacy-First AI**: All AI inference occurs locally in isolated VMs, with no cloud dependencies.
+- **GPU-Accelerated**: PCI passthrough enables hardware acceleration for fast AI inference.
+- **Modular Architecture**: Qubes VM separation keeps logs, configurations, and AI components securely isolated.
+- **Anomaly Detection**: Continuous log parsing and contextual analysis detect suspicious activity in real time.
 - **Self-Sovereign Intelligence**: Your data and insights remain yours—no third-party services or data sharing.
-- **Isolated Interactions**: These separate VMs communicate only through controlled interfaces (like Qubes qrexec services and API endpoints). There is no direct device or file sharing, which limits lateral movement even if one VM is compromised.
-- **Attack Path Mitigation**: By segregating services, common attack vectors (like DHCP spoofing, DNS poisoning, VPN tunnel compromise) are contained within their respective VMs. An attacker compromising the DNS VM cannot easily pivot to the DHCP VM or to the AI VM, preserving system integrity.
+- **Isolated Interactions**: VMs communicate only through controlled interfaces (like Qubes qrexec services and API endpoints), with no direct device or file sharing. This limits lateral movement even if one VM is compromised.
+- **Attack Path Mitigation**: Segregating services contains common attack vectors (e.g., DHCP spoofing, DNS poisoning, VPN tunnel compromise) within their respective VMs, preserving system integrity.
 
 ## 🏗️ VM Architecture Overview
 
-| VM Name    | Purpose                                    
-|------------|--------------------------------------------
-| sys-ai     | Inference engine running Ollama + GPU passthrough (Phi3, Mistral, etc.)
-| sys-dev    | Development environment with VS Code, LangChain, scripting tools, API calls to sys-ai
-| sys-config | Stores all configuration files, YAML logs, and historical data in a Git-managed repo
-| sys-logs   | Stores historical logs, change logs, LLM prompts
-| sys-router | Acts as a gateway VM for traffic routing (DHCP, DNS, VPN, VLANs)
-| sys-dns    | Disposable DNS server VM
-| sys-dhcp   | Disposable DHCP server VM
-| sys-vpn     | Disposable VPN VM (optional)
-| sys-firewall| Disposable Firewall VM controlling upstream traffic
+| VM Name      | Purpose                                    
+|--------------|--------------------------------------------
+| dom0         | Qubes management domain; oversees VM lifecycle, security policies, and system updates
+| sys-ai*      | Inference engine running Ollama + GPU passthrough (Phi3, Mistral, etc.)
+| sys-dev      | Development environment with VS Code, LangChain, scripting tools, API calls to sys-ai
+| sys-config   | Centralized storage for all configuration files, YAML logs, DHCP leases, DNS filter lists, firewall/router configs, and VLAN settings in a Git-managed repo
+| sys-router*  | Gateway VM for traffic routing (DHCP, DNS, VPN, VLANs)
+| sys-dns*     | Disposable DNS server VM
+| sys-dhcp*    | Disposable DHCP server VM
+| sys-vpn*     | Disposable VPN VM (optional)
+| sys-firewall | Disposable Firewall VM controlling upstream traffic
+| sys-lan      | Disposable VM handling VLAN tagging 
+( * = custom template)
 
 ### 🧩 Connectivity
-- `sys-dev` sends prompt or code requests to `sys-ai` (Ollama API over port 11434).
+- `sys-dev` sends prompt or code requests to `sys-ai` (Ollama API).
 - `sys-dev` pulls config files from `sys-config` using qrexec or qvm-copy.
-- `sys-config` does **not** have direct network access. it’s a secure config storage VM.
-- All VMs’ networking is routed via `sys-router` (with firewall rules managed by `sys-firewall`).
+- `sys-config` has **no direct network access**; it serves as a secure, read-only config storage VM.
+- VMs’ networking is routed via `sys-router`.
+- VMs communicate securely using custom **qrexec** services configured in `dom0` to enforce strict access controls and minimize attack surface.
 
-## Prerequisites
-- You should have a working understanding of Linux and the specific enhancements by the Qubes OS project (Disposable VMs, Templates, etc) 
+## Getting Started
+To get started, ensure you have a working knowledge of Linux and Qubes OS fundamentals (Disposable VMs, Templates, etc.). Follow the hardware and virtualization setup steps below to prepare your environment, then proceed with AI environment setup and integration.
+
+## dom0 Responsibilities and qrexec Configuration
+The `dom0` domain is the trusted administrative domain in Qubes OS responsible for managing VM lifecycles, enforcing security policies, and configuring inter-VM communication. To enable secure interactions between VMs in this AI router setup, custom **qrexec** services are defined and managed within `dom0`. These services act as controlled interfaces allowing specific commands or data transfers while preventing unauthorized access.
+By carefully managing qrexec services in `dom0`, this AI router architecture maintains strong isolation between components while enabling necessary, secure inter-VM communication.
 
 # Configuration Overview
 
 ### 🛠️ Hardware and Virtualization Setup
-- Use an NVIDIA 30xx+ GPU for best compatibility with CUDA 12
-- Pass through GPU (and audio controller) to a dedicated HVM-based `sys-ai` VM.
+- Use an NVIDIA 30xx+ GPU for best compatibility with CUDA 12.
+- Pass through the GPU (and audio controller) to a dedicated HVM-based `sys-ai` VM.
 - Disable dynamic memory balancing in Qubes VM settings.
 - Enable strict PCI reset in Qubes global settings to ensure safe GPU resets.
-- Disable `nouveau` driver by:
-  - Blacklisting it in `/etc/default/grub` config. Add this the GRUB_CMDLINE_LINUX line, `rd.driver.blacklist=nouveau modprobe.blacklist=nouveau`
-  - Regenerate GRUB config: `sudo grub2-mkconfig -o /boot/grub2/grub.cfg`
-  - Confirm nouveau is not loaded. This should return nothing from a dom0 terminal: `lsmod | grep nouveau`
-- Install NVIDIA CUDA drivers `https://developer.nvidia.com/cuda-downloads`
-  - Reboot and confirm `nvidia` drivers are in use inside `sys-ai` (`nvidia-smi`, `lsmod`, `lspci`)
-  - Install nvidia-smi (`sudo dnf install -y nvidia-smi`)
+- Disable the `nouveau` driver by blacklisting it in `/etc/default/grub` and regenerating GRUB config.
+- Install NVIDIA CUDA drivers from `https://developer.nvidia.com/cuda-downloads`.
+- Confirm NVIDIA drivers are in use inside `sys-ai` (`nvidia-smi`, `lsmod`, `lspci`).
+- Install `nvidia-smi` (`sudo dnf install -y nvidia-smi`).
 
 ### 🧰 AI Environment Setup
-- Download and install [Ollama](https://ollama.ai)
-- Confirm Nvidia driver installation (`nvidia-smi` shows GPU)
-- [ ] Install Ollama in the `sys-ai` VM, including:
-  - Fetch a suitable LLM for your GPU size (e.g., `llama3` or `mixtral`).
-- [ ] Set up a Python environment for LLM orchestration:
-  - Install Python 3 (if not already available).
-  - Create a virtual environment for package management:
-    ```bash
-    python3 -m venv ai-env
-    source ai-env/bin/activate
-    ```
-- [ ] Install **LangChain** for structured prompt interactions:
-  ```bash
-  pip install langchain
-  ```
-- [ ] Optionally install additional LLM frameworks:
-  - [ ] NVIDIA’s TensorRT-LLM toolkit.
-  - [ ] [lmdeploy](https://github.com/InternLM/lmdeploy) for efficient serving.
-- [ ] Run a test query to verify everything is working:
+- Download and install [Ollama](https://ollama.ai).
+- Download and install CUDA 
+- Download and install NVIDIA Drivers
+- Confirm NVIDIA driver installation (`nvidia-smi` shows GPU).
+- Optionally install additional LLM frameworks:
+  - NVIDIA’s TensorRT-LLM toolkit.
+  - [lmdeploy](https://github.com/InternLM/lmdeploy) for efficient serving.
+- Run a test query to verify everything is working:
   ```bash
   ollama run llama3 "Hello AI Router!"
   ```
-- [ ] (Optional) Build any custom scripts or services to tie everything together.
-- [ ] (Optional) Integrate LLM APIs locally with your IDE (in `sys-router` or other VMs):
-  - Example: Connect VS Code or another IDE to the LLM’s API endpoint via a local plugin or custom extension.
-  - Example Python integration:
-    ```python
-    from langchain_community.llms import Ollama
 
-    llm = Ollama(model="llama3", base_url="http://sys-ai:11434")
-    prompt = "Parse this YAML config and summarize it."
-    response = llm(prompt)
-    print(response)
-    ```
+### Setting Up qrexec Policies and Services ###
+1. **Define Custom qrexec Services:**  
+   Create service scripts under `/etc/qubes-rpc/` in `dom0` that specify allowed commands or data exchanges between VMs (e.g., fetching config files from `sys-config` or sending AI prompts to `sys-ai`).
+2. **Configure Policy Files:**  
+   Edit `/etc/qubes-rpc/policy` in `dom0` to specify which VMs can invoke each service and under what conditions. This ensures least privilege and auditability.
+3. **Reload qrexec Daemon:**  
+   After changes, reload the qrexec daemon or reboot `dom0` to apply new policies.
+4. **Testing and Validation:**  
+   Verify that only authorized VMs can access the services and that communication behaves as expected without exposing unnecessary privileges.
+
+### 🗂️ Config VM and Centralized Data Storage
+We’re consolidating logs, DHCP leases, DNS filter lists, firewall rules, router configurations, and netVM VLAN configurations into the dedicated `sys-config` VM. This ensures:
+
+- **Single source of truth**: All critical configs and historical data are tracked in one place.
+- **Disposable service VMs**: Services like DHCP, DNS, VPN, and firewall remain stateless, pulling their configuration from `sys-config` as needed.
+- **Read-only access**: Service VMs can **read** from `sys-config` but cannot **write** to it. This prevents accidental or malicious modification of configuration data.
+- **Version control**: We use Git inside `sys-config` to track changes, enabling easy rollback and history tracking.
+
+This approach removes the need for a separate log VM (`sys-logs`) while improving security and simplicity.
 
 ### 2️⃣ Enable AI Router Capabilities
-- [ ] Connect the AI VM (`sys-ai`) to the core Qubes router VM (`sys-router` or equivalent).
-- [ ] Set up log file sharing or API endpoints for logs from:
+- Connect the AI VM (`sys-ai`) to the core Qubes router VM (`sys-router` or equivalent).
+- Set up log file sharing or API endpoints for logs from:
   - Network devices.
   - Qubes firewall VM.
   - Config backups.
 
 ### 3️⃣ Integrate MCP Tools and Automation
-- [ ] Determine the model size and context size needed for your AI workflows.
-- [ ] Use MCP tools (Model Context Protocol) to:
+- (Optional) Integrate LLM APIs locally with your IDE:
+- Determine the model size and context size needed for your AI workflows.
+- Set up a Python environment for LLM orchestration:
+  ```bash
+  python3 -m venv ai-env
+  source ai-env/bin/activate
+  ```
+- Install **LangChain** for structured prompt interactions:
+  ```bash
+  pip install langchain
+  ```
+- Use MCP tools (Model Context Protocol) to:
   - Expose logs and config files as structured input.
   - Parse and store historical context.
-- [ ] Automate prompt-based analysis and anomaly detection.
-- [ ] Possibly deploy:
-  - [ ] A vector database (like Qdrant or Weaviate) for historical log embeddings.
-
-### 4️⃣ Security & Privacy Considerations
-- [ ] Audit and harden GPU passthrough access.
-- [ ] Implement strong isolation between the AI VM and sensitive config VMs.
-- [ ] (Optional) Move model downloads behind Tor (`sys-whonix`) for better anonymity.
-
-### 🗂️ Config VM and Git Repository
-- Create a dedicated Qubes VM (`sys-config` or similar) for managing configurations and historical data.
-- Initialize a Git repository in this VM for tracking configuration changes:
-  ```bash
-  git init --initial-branch=main
-  git add .
-  git commit -m "Initial commit"
-  ```
-- Regularly push changes to an external Git server (or use local-only snapshots if privacy is critical).
-- This Git repository can store YAML config files, firewall rules, AI prompt logs, and other operational data.
-- Carefully manage the permissions of this VM, as it contains sensitive data.
-
----
+- Automate prompt-based analysis and anomaly detection.
+- Possibly deploy:
+  - A vector database (like Qdrant or Weaviate) for historical log embeddings.
 
 ## 🧩 Possible Tooling Choices
-
 - **LLM backend**: Ollama, LMDeploy, vLLM.
 - **Prompt engineering / orchestration**: LangChain, LlamaIndex.
 - **Vector DB**: Qdrant, Milvus.
 - **Anomaly detection**: Use model context + external rules.
 
-configuration steps:
+## Configuration Scripts and Files: ##
+- VM and Template Creation
+- dom0 qrexec services
+- qrexec policy file
+- Firewall 
+- DHCP configuration
+- DNS Configuration
+- VLAN Configuration
+- LLM Setup
 
-- Clone minimal template for ai-minimal
-qvm-clone fedora-41-minimal sys-ai-minimal
--disable memory balancing
+### 4️⃣ Security & Privacy Considerations
+- Audit and harden GPU passthrough access.
+- Verify strong isolation between the AI VM and sensitive config VMs.
+- (Optional) Move model downloads behind Tor (`sys-whonix`) for better anonymity.
 
-sudo dnf config-manager addrepo --from-repofile https://developer.download.nvidia.com/compute/cuda/repos/fedora41/x86_64/cuda-fedora41.repo
-sudo dnf clean all
-sudo dnf -y install cuda-toolkit-12-9
-sudo dnf -y install cuda-drivers
-sudo dnf -y install nvidia-smi
+## Project File Structure
+
+```
+QubesAIRouter/
+├── README.md
+├── scripts/
+│   ├── create_vms.sh
+│   ├── setup_qrexec_services.sh
+│   ├── configure_firewall.sh
+│   ├── deploy_dhcp_dns.sh
+│   └── setup_llm_env.sh
+├── dom0/
+│   ├── qubes-rpc/
+│   │   ├── sys-config.get-config
+│   │   ├── sys-ai.run-ollama
+│   │   └── policy
+├── sys-config/
+│   ├── configs/
+│   │   ├── firewall.rules
+│   │   ├── dhcpd.conf
+│   │   ├── named.conf
+│   │   └── vlan_settings.yaml
+│   ├── logs/
+│   └── leases/
+├── sys-ai/
+│   └── docker/
+│       └── Dockerfile
+├── sys-dev/
+│   └── langchain_prompts/
+└── docs/
+    └── architecture.png
+```

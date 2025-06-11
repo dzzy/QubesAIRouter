@@ -28,16 +28,66 @@ Key advantages include:
 | sys-dns*     | Disposable DNS server VM
 | sys-dhcp*    | Disposable DHCP server VM
 | sys-vpn*     | Disposable VPN VM (optional)
-| sys-firewall | Disposable Firewall VM controlling upstream traffic
-| sys-lan      | Disposable VM handling VLAN tagging 
+| sys-lan*     | Disposable VM handling VLAN tagging 
 ( * = custom template)
 
-### 🧩 Connectivity
-- `sys-dev` sends prompt or code requests to `sys-ai` (Ollama API).
-- `sys-dev` pulls config files from `sys-config` using qrexec or qvm-copy.
-- `sys-config` has **no direct network access**; it serves as a secure, read-only config storage VM.
-- VMs’ networking is routed via `sys-router`.
-- VMs communicate securely using custom **qrexec** services configured in `dom0` to enforce strict access controls and minimize attack surface.
+## 🔗 Inter-VM Connectivity Architecture
+
+This section outlines the architecture for interconnections between VMs and the qrexec services facilitating secure interactions.
+
+### Key Inter-VM Connections:
+
+1. **DNS and DHCP Services:**
+   - **sys-dns** and **sys-dhcp** VMs communicate with **sys-router** for processing DNS queries and assigning IP leases.
+   - Configurations are pulled from **sys-config** using qrexec services to ensure centralized management.
+
+2. **VLAN Tagging:**
+   - **sys-lan** VM manages network segmentation.
+   - Pulls VLAN configurations from **sys-config** using qrexec services for secure isolation of network traffic.
+
+3. **VPN Configuration:**
+   - **sys-vpn** is optionally used for secure external connections.
+   - Configurations and keys are securely retrieved from **sys-config**.
+
+4. **Configuration & Log Management:**
+   - **sys-config** serves as the centralized repository for all configuration files and logs.
+   - Configurations are fetched by service VMs on startup using dedicated qrexec services to enforce read-only access.
+   - Logs are accessed by the **sys-ai** VM through the **sys-dev** VM, which orchestrates AI prompts and analyzes data using LangChain.
+
+5. **AI Predictions and Inference:**
+   - **sys-ai** handles AI inference tasks, using GPU acceleration through PCI passthrough.
+   - Commands and data for AI processing are sent from **sys-dev** using qrexec services.
+
+### Required qrexec Rules:
+
+- **Service Configuration Fetching:**
+  ```bash
+  sys-dev sys-config sys-config.get-dev-config ask
+  sys-router sys-config sys-config.get-router-config ask
+  sys-dns sys-config sys-config.get-dns-config ask
+  sys-dhcp sys-config sys-config.get-dns-config ask
+  sys-vpn sys-config sys-config.get-vpn-config ask
+  sys-lan sys-config sys-config.get-lan-config ask
+  ```
+
+- **AI Command Execution:**
+  ```bash
+  sys-dev sys-ai sys-ai.run-ollama allow
+  ```
+
+### Configuration & Security Considerations:
+
+- **Secure qrexec Setup:**
+  Configure qrexec services in `dom0` to only allow necessary data transfers between VMs.
+  Use `ask` or `allow` in policies depending on the desired level of user interaction and security.
+
+- **Isolation and Least Privilege:**
+  Minimize the attack surface by ensuring each VM has only the access it needs.
+  Continuous monitoring and auditing of qrexec usage can ensure compliance with security policies.
+
+- **Log Handling:**
+  Logs and configuration data should only be exposed to necessary VMs with controlled access protocols.
+  The architecture promotes strong data governance and confidentiality through secure and explicit inter-VM communication.
 
 ## Getting Started
 To get started, ensure you have a working knowledge of Linux and Qubes OS fundamentals (Disposable VMs, Templates, etc.). Follow the hardware and virtualization setup steps below to prepare your environment, then proceed with AI environment setup and integration.
@@ -96,13 +146,12 @@ We’re consolidating logs, DHCP leases, DNS filter lists, firewall rules, route
 
 ### 2️⃣ Enable AI Router Capabilities
 - Connect the AI VM (`sys-ai`) to the core Qubes router VM (`sys-router` or equivalent).
-- Set up log file sharing or API endpoints for logs from:
+- Set up API endpoints for logs from:
   - Network devices.
   - Qubes firewall VM.
   - Config backups.
 
 ### 3️⃣ Integrate MCP Tools and Automation
-- (Optional) Integrate LLM APIs locally with your IDE:
 - Determine the model size and context size needed for your AI workflows.
 - Set up a Python environment for LLM orchestration:
   ```bash
@@ -141,36 +190,9 @@ We’re consolidating logs, DHCP leases, DNS filter lists, firewall rules, route
 - Audit and harden GPU passthrough access.
 - Verify strong isolation between the AI VM and sensitive config VMs.
 - (Optional) Move model downloads behind Tor (`sys-whonix`) for better anonymity.
-
-## Project File Structure
-
-```
-QubesAIRouter/
-├── README.md
-├── scripts/
-│   ├── create_vms.sh
-│   ├── setup_qrexec_services.sh
-│   ├── configure_firewall.sh
-│   ├── deploy_dhcp_dns.sh
-│   └── setup_llm_env.sh
-├── dom0/
-│   ├── qubes-rpc/
-│   │   ├── sys-config.get-config
-│   │   ├── sys-ai.run-ollama
-│   │   └── policy
-├── sys-config/
-│   ├── configs/
-│   │   ├── firewall.rules
-│   │   ├── dhcpd.conf
-│   │   ├── named.conf
-│   │   └── vlan_settings.yaml
-│   ├── logs/
-│   └── leases/
-├── sys-ai/
-│   └── docker/
-│       └── Dockerfile
-├── sys-dev/
-│   └── langchain_prompts/
-└── docs/
-    └── architecture.png
-```
+To prevent prompt injection via logs:
+	•	Sanitize log inputs
+	•	Separate logs from prompts
+	•	Enforce strict templates
+	•	Never allow AI direct write access
+	•	Log and audit everything

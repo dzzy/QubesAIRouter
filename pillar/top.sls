@@ -1,3 +1,8 @@
+# pillar/top.sls
 base:
   dom0:
-    - secrets
+    - roles.dom0
+  'tag:router-dvm':
+    - netconfig
+  'tag:router-fedora':
+    - roles.router-template

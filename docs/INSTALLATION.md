@@ -24,7 +24,7 @@ sudo dnf install -y ansible git
 
 Clone the repository inside `sys-mgmt`:
 ```bash
-git clone <your_repo_url>
+git clone https://github.com/dzzy/QubesAIRouter
 cd QubesAIRouter
 ```
 

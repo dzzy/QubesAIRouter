@@ -2,16 +2,6 @@
 
 ### Configuration Scripts
 
-#### VM and Template Creation Scripts
-- Use Qubes CLI to automate VM creation and setup:
-```bash
-# Create a disposable VM for DNS service
-qvm-create sys-dns --template sys-firewall --label blue --dispvm
-
-# Create a standalone VM for AI inference with GPU passthrough
-qvm-create sys-ai --class hvm --label red
-qvm-pci attach sys-ai dom0:01_00.0 # Attach GPU PCI device, replace with correct PCI address
-```
 - Automate template customization with scripts to install necessary packages and configure services inside each VM.
 
 #### dom0 qrexec Service Scripts

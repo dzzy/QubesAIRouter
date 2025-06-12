@@ -13,13 +13,6 @@ In **dom0**, execute:
 qvm-create sys-mgmt --template fedora-37 --label yellow --netvm none
 ```
 
-Inside **sys-mgmt**, install Ansible/Git, and fetch IaC repository:
-```bash
-sudo dnf install -y ansible git
-git clone https://github.com/dzzy/QubesAIRouter
-cd QubesAIRouter/ansible
-```
-
 ### 2. Configure Secure Dom0 ↔ sys-mgmt qrexec Communication  
 
 **In dom0**, create restricted RPC script `/etc/qubes-rpc/dom0.exec_qvm_command`:
@@ -40,3 +33,17 @@ sudo chmod +x /etc/qubes-rpc/dom0.exec_qvm_command
 ```
 
 Create qrexec policy file to whitelist sys-mgmt explicitly at `/etc/qubes-rpc/policy/dom0.exec_qvm_command`:
+With the following line: 
+```mgmt-vm dom0 allow```
+
+### 3. Run playbook to deploy 
+
+Inside **sys-mgmt**, install Ansible/Git, and fetch IaC repository:
+```bash
+sudo dnf install -y ansible git
+git clone https://github.com/dzzy/QubesAIRouter
+cd QubesAIRouter/ansible
+```
+ansible-playbook -i inventory.ini playbooks/bootstrap.yml | tee bootstrap.log
+
+### 4. 

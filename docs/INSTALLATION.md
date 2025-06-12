@@ -1,49 +1,37 @@
-## 🔧 Installation Guide (Ansible-based External IaC VM)
+Create a Temporary Git Clone VM
 
-### Prerequisites:
-- Fundamental knowledge of Qubes OS, Linux, and Ansible.
-- Backup of important data prior to deployment.
+qvm-create sys-git --template fedora-37 --label green --netvm sys-net
 
-## Step-by-Step Setup:
+Start it and clone the repo inside:
 
-### 1. Create and configure Management VM (`sys-mgmt`):
+qvm-run -p sys-git 'git clone https://github.com/dzzy/QubesAIRouter ~/QubesAIRouter'
 
-In **dom0**, execute:
-```bash
-qvm-create sys-mgmt --template fedora-37 --label yellow --netvm none
-```
+Copy Salt Files from sys-git to dom0
 
-### 2. Configure Secure Dom0 ↔ sys-mgmt qrexec Communication  
+Salt states are in ~/QubesAIRouter/salt and ~/QubesAIRouter/pillar in sys-git.
 
-**In dom0**, create restricted RPC script `/etc/qubes-rpc/dom0.exec_qvm_command`:
-```bash
-#!/bin/sh
-case "$1" in
-  qvm-create*|qvm-remove*|qvm-prefs*|qvm-clone*|qvm-pci*)
-    $1 ;;
-  *)
-    echo "Command Not Allowed" >&2
-    exit 1 ;;
-esac
-```
+Use qvm-run or qvm-copy to move files:
 
-Make executable:
-```bash
-sudo chmod +x /etc/qubes-rpc/dom0.exec_qvm_command
-```
+qvm-run -p sys-git 'tar -czf /home/user/salt_bundle.tar.gz -C ~/QubesAIRouter salt pillar'
 
-Create qrexec policy file to whitelist sys-mgmt explicitly at `/etc/qubes-rpc/policy/dom0.exec_qvm_command`:
-With the following line: 
-```mgmt-vm dom0 allow```
+Then in dom0:
 
-### 3. Run playbook to deploy 
+sudo mkdir -p /srv/salt /srv/pillar
+sudo tar -xzf /tmp/salt_bundle.tar.gz -C /srv
 
-Inside **sys-mgmt**, install Ansible/Git, and fetch IaC repository:
-```bash
-sudo dnf install -y ansible git
-git clone https://github.com/dzzy/QubesAIRouter
-cd QubesAIRouter/ansible
-```
-ansible-playbook -i inventory.ini playbooks/bootstrap.yml | tee bootstrap.log
+Apply Salt States in dom0
 
-### 4. 
+Now run:
+
+sudo qubesctl state.apply
+
+Or apply individual modules:
+
+sudo qubesctl state.apply vm.sys-router
+
+Optional Cleanup
+
+After applying, you can delete the Git VM and bundle:
+
+qvm-remove -f sys-git
+rm /tmp/salt_bundle.tar.gz

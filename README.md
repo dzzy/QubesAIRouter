@@ -137,36 +137,11 @@ By carefully managing qrexec services in `dom0`, this AI router architecture mai
    Verify that only authorized VMs can access the services and that communication behaves as expected without exposing unnecessary privileges.
 
 
-## 🔒 Secure Qubes Ansible Architecture:
-
-```
-   ┌───────────────────┐              ┌─────────┐
-   │                   │  qrexec rpc  │         │
-   │   sys-mgmt (AppVM)│─────────────▶│  dom0   │
-   │     (with Ansible)│◀─────────────│         │
-   └──────────▲────────┘              └───▲─────┘
-              │                           │
-              │ (disconnected │           │
-              │  from network │           │ qvm-* commands executed via rpc
-              │  optionally)  │           │ dom0 returns execution status 
-              ▼                           ▼
-    ┌───────────────────────────┐ ┌───────────────────┐
-    │  git-managed IaC repo VM  │ │  Qubes Managed VMs│
-    └───────────────────────────┘ └───────────────────┘
-```
-
-- **dom0 stays pristine, minimal, isolated, secure.**
-- All Ansible logic stays out of dom0.
-- No additional packages (like Ansible or Python) installed in dom0.
-- Setup is secure, auditable, and aligns directly with Qubes security model.
-
 ### 🗂️ Config VM and Centralized Data Storage
 We’re consolidating logs, DHCP leases, DNS filter lists, firewall rules, router configurations, and netVM VLAN configurations into the dedicated `sys-config` VM. This ensures:
 
 - **Single source of truth**: All critical configs and historical data are tracked in one place.
 - **Disposable service VMs**: Services like DHCP, DNS, VPN, and firewall remain stateless, pulling their configuration from `sys-config` as needed.
-- **Read-only access**: Service VMs can **read** from `sys-config` but cannot **write** to it. This prevents accidental or malicious modification of configuration data.
-- **Version control**: We use Git inside `sys-config` to track changes, enabling easy rollback and history tracking.
 - Provide access to logs and relevant network data to the MCP server through the `sys-dev` VM, avoiding direct log file sharing or pushing logs between VMs. This ensures logs are exposed securely and controlled via `sys-dev` APIs rather than shared directly to the LLM. This approach removes the need for a separate log VM (`sys-logs`) while improving security and simplicity.
 
 ### 2️⃣ Enable AI Router Capabilities

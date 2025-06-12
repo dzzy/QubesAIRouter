@@ -14,7 +14,7 @@ Key advantages include:
 - **Anomaly Detection**: Continuous log parsing and contextual analysis detect suspicious activity in real time.
 - **Self-Sovereign Intelligence**: Your data and insights remain yours—no third-party services or data sharing.
 - **Isolated Interactions**: VMs communicate only through controlled interfaces (like Qubes qrexec services and API endpoints), with no direct device or file sharing. This limits lateral movement even if one VM is compromised.
-- **Attack Path Mitigation**: Segregating services contains common attack vectors (e.g., DHCP spoofing, DNS poisoning, VPN tunnel compromise) within their respective VMs, preserving system integrity.
+- **Attack Path Mitigation**: Segregating services contains common attack vectors within their respective VMs, preserving system integrity.
 
 ## 🏗️ VM Architecture Overview
 
@@ -23,10 +23,9 @@ Key advantages include:
 | dom0         | Qubes management domain; oversees VM lifecycle, security policies, and system updates
 | sys-ai*      | Inference engine running Ollama + GPU passthrough (Phi3, Mistral, etc.)
 | sys-dev      | Development environment with VS Code, LangChain, scripting tools, API calls to sys-ai
-| sys-config   | Centralized storage for all configuration files, YAML logs, DHCP leases, DNS filter lists, firewall/router configs, and VLAN settings in a Git-managed repo
-| sys-router*  | Gateway VM for traffic routing (DHCP, DNS, VPN, VLANs)
+| sys-config   | Centralized storage for all persistent data: DHCP leases, DNS filter lists, etc. in a Git-managed repo
+| sys-router*  | Disposable Gateway VM for traffic routing (DHCP, DNS, VPN, VLANs)
 | sys-dns*     | Disposable DNS server VM
-| sys-mgmt     | Manages deployment with ansible
 | sys-dhcp*    | Disposable DHCP server VM
 | sys-vpn*     | Disposable VPN VM (optional)
 | sys-lan*     | Disposable VM handling VLAN tagging 
@@ -40,18 +39,17 @@ This section outlines the architecture for interconnections between VMs and the 
 
 1. **DNS and DHCP Services:**
    - **sys-dns** and **sys-dhcp** VMs communicate with **sys-router** for processing DNS queries and assigning IP leases.
-   - Configurations are pulled from **sys-config** using qrexec services to ensure centralized management.
+   - Dynamic configurations are pulled from **sys-config** using qrexec services to ensure centralized management.
 
 2. **VLAN Tagging:**
    - **sys-lan** VM manages network segmentation.
-   - Pulls VLAN configurations from **sys-config** using qrexec services for secure isolation of network traffic.
 
 3. **VPN Configuration:**
    - **sys-vpn** is optionally used for secure external connections.
-   - Configurations and keys are securely retrieved from **sys-config**.
+   - Configurations and keys are securely retrieved from **salt pillar**.
 
 4. **Configuration & Log Management:**
-   - **sys-config** serves as the centralized repository for all configuration files and logs.
+   - **sys-config** serves as the centralized repository for all dynamic files and logs.
    - Configurations are fetched by service VMs on startup using dedicated qrexec services to enforce read-only access.
    - Logs are accessed by the **sys-ai** VM through the **sys-dev** VM, which orchestrates AI prompts and analyzes data using LangChain.
 
@@ -96,6 +94,7 @@ To get started, ensure you have a working knowledge of Linux and Qubes OS fundam
 ## dom0 Responsibilities and qrexec Configuration
 The `dom0` domain is the trusted administrative domain in Qubes OS responsible for managing VM lifecycles, enforcing security policies, and configuring inter-VM communication. To enable secure interactions between VMs in this AI router setup, custom **qrexec** services are defined and managed within `dom0`. These services act as controlled interfaces allowing specific commands or data transfers while preventing unauthorized access.
 By carefully managing qrexec services in `dom0`, this AI router architecture maintains strong isolation between components while enabling necessary, secure inter-VM communication.
+Salt configuration in dom0 maintains VM template configurations 
 
 # Configuration Overview
 
@@ -121,10 +120,6 @@ By carefully managing qrexec services in `dom0`, this AI router architecture mai
   ```bash
   ollama run llama3 "Hello AI Router!"
   ```
-  - Set up MCP (Model Context Protocol) servers to support AI router capabilities, including:
-  - **Log Parsing Server**: Continuously ingests and parses logs from network devices and firewall VMs.
-  - **Prompt Orchestration Server**: Manages structured prompt interactions and coordinates AI queries.
-  - **Context Memory Server**: Stores and retrieves historical context and embeddings to enhance AI responses.
 
 ### Setting Up qrexec Policies and Services ###
 1. **Define Custom qrexec Services:**  
@@ -136,7 +131,6 @@ By carefully managing qrexec services in `dom0`, this AI router architecture mai
 4. **Testing and Validation:**  
    Verify that only authorized VMs can access the services and that communication behaves as expected without exposing unnecessary privileges.
 
-
 ### 🗂️ Config VM and Centralized Data Storage
 We’re consolidating logs, DHCP leases, DNS filter lists, firewall rules, router configurations, and netVM VLAN configurations into the dedicated `sys-config` VM. This ensures:
 
@@ -145,7 +139,6 @@ We’re consolidating logs, DHCP leases, DNS filter lists, firewall rules, route
 - Provide access to logs and relevant network data to the MCP server through the `sys-dev` VM, avoiding direct log file sharing or pushing logs between VMs. This ensures logs are exposed securely and controlled via `sys-dev` APIs rather than shared directly to the LLM. This approach removes the need for a separate log VM (`sys-logs`) while improving security and simplicity.
 
 ### 2️⃣ Enable AI Router Capabilities
-- Connect the AI VM (`sys-ai`) to the core Qubes router VM (`sys-router` or equivalent).
 - Set up API endpoints for logs from:
   - Network devices.
   - Qubes firewall VM.
@@ -166,8 +159,7 @@ We’re consolidating logs, DHCP leases, DNS filter lists, firewall rules, route
   - Expose logs and config files as structured input.
   - Parse and store historical context.
 - Automate prompt-based analysis and anomaly detection.
-- Possibly deploy:
-  - A vector database (like Qdrant or Weaviate) for historical log embeddings.
+- Deploy a vector database (like Qdrant or Weaviate) for historical log embeddings.
   **Note:** Logs and relevant network data are only exposed to the MCP server through the `sys-dev` VM. There is no direct log file sharing or pushing of logs from the service VMs (such as DHCP, DNS, VPN, firewall) to the MCP server. This design ensures that all log access is mediated and controlled via `sys-dev` APIs, maintaining strict security boundaries and minimizing attack surface.
 
 ## 🧩 Possible Tooling Choices
@@ -179,8 +171,8 @@ We’re consolidating logs, DHCP leases, DNS filter lists, firewall rules, route
 ## Configuration Scripts and Files: ##
 - VM and Template Creation
 - dom0 qrexec services
-- qrexec policy file
-- Firewall 
+- qrexec policy files
+- Firewall (DPI, IDS)
 - DHCP configuration
 - DNS Configuration
 - VLAN Configuration
@@ -192,7 +184,7 @@ We’re consolidating logs, DHCP leases, DNS filter lists, firewall rules, route
 - (Optional) Move model downloads behind Tor (`sys-whonix`) for better anonymity.
 To prevent prompt injection via logs:
 	•	Sanitize log inputs
-	•	Separate logs from prompts
+	•	Separate logs from prompts, block prompt injection
 	•	Enforce strict templates
-	•	Never allow AI direct write access
+	•	Never allow AI or Dev VM direct write access to any config or templates
 	•	Log and audit everything

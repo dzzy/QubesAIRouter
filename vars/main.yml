@@ -1,0 +1,42 @@
+# vars/main.yml
+
+qubes:
+  base_template: fedora-37-minimal
+  custom_prefix: custom-
+
+  netvm:
+    upstream: sys-net
+    router: sys-router
+
+  vms:
+    - name: sys-router
+      type: AppVM
+      label: blue
+      netvm: sys-net
+
+    - name: sys-ai
+      type: HVM
+      label: red
+      netvm: sys-router
+      gpu_pci_address: "01:00.0"
+
+    # Define other VMs similarly
+
+network:
+  vlans:
+    - id: 10
+      subnet: "192.168.10.0/24"
+      dhcp_range: "192.168.10.50,192.168.10.100"
+    - id: 20
+      subnet: "192.168.20.0/24"
+      dhcp_range: "192.168.20.50,192.168.20.100"
+
+dns:
+  forwarders:
+    - "1.1.1.1"
+    - "8.8.8.8"
+
+security:
+  allow_external_ssh: false
+  ssh_allowed_ips:
+    - "203.0.113.5"

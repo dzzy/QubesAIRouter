@@ -26,6 +26,7 @@ Key advantages include:
 | sys-config   | Centralized storage for all configuration files, YAML logs, DHCP leases, DNS filter lists, firewall/router configs, and VLAN settings in a Git-managed repo
 | sys-router*  | Gateway VM for traffic routing (DHCP, DNS, VPN, VLANs)
 | sys-dns*     | Disposable DNS server VM
+| sys-mgmt     | Manages deployment with ansible
 | sys-dhcp*    | Disposable DHCP server VM
 | sys-vpn*     | Disposable VPN VM (optional)
 | sys-lan*     | Disposable VM handling VLAN tagging 
@@ -134,6 +135,30 @@ By carefully managing qrexec services in `dom0`, this AI router architecture mai
    After changes, reload the qrexec daemon or reboot `dom0` to apply new policies.
 4. **Testing and Validation:**  
    Verify that only authorized VMs can access the services and that communication behaves as expected without exposing unnecessary privileges.
+
+
+## 🔒 Secure Qubes Ansible Architecture:
+
+```
+   ┌───────────────────┐              ┌─────────┐
+   │                   │  qrexec rpc  │         │
+   │   sys-mgmt (AppVM)│─────────────▶│  dom0   │
+   │     (with Ansible)│◀─────────────│         │
+   └──────────▲────────┘              └───▲─────┘
+              │                           │
+              │ (disconnected │           │
+              │  from network │           │ qvm-* commands executed via rpc
+              │  optionally)  │           │ dom0 returns execution status 
+              ▼                           ▼
+    ┌───────────────────────────┐ ┌───────────────────┐
+    │  git-managed IaC repo VM  │ │  Qubes Managed VMs│
+    └───────────────────────────┘ └───────────────────┘
+```
+
+- **dom0 stays pristine, minimal, isolated, secure.**
+- All Ansible logic stays out of dom0.
+- No additional packages (like Ansible or Python) installed in dom0.
+- Setup is secure, auditable, and aligns directly with Qubes security model.
 
 ### 🗂️ Config VM and Centralized Data Storage
 We’re consolidating logs, DHCP leases, DNS filter lists, firewall rules, router configurations, and netVM VLAN configurations into the dedicated `sys-config` VM. This ensures:

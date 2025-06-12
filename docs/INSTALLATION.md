@@ -1,74 +1,87 @@
-## 🔧 Installation Guide
+## 🔧 Installation Guide (Ansible-based External IaC VM)
 
-The following steps will bootstrap and configure the entire Qubes AI Router environment automatically. This script should be executed in the Qubes OS `dom0` administrative VM.
+### Prerequisites:
+- A working knowledge of Linux and Qubes OS basics.
+- A dedicated, isolated management VM (`sys-mgmt`) with Ansible and Git.
+- Backup important data prior to installation and teardown.
 
 ### Step-by-Step Setup:
 
-- **Always review your `config.sh` carefully before execution.**
-- **Keep logs (`bootstrap.log` and `teardown.log`) saved for debugging purposes.**
-- **Backup important data and configurations prior to execution of teardown.**
+### 1. Create and Configure the Management VM (`sys-mgmt`):
 
-1. **Clone the Repository (In a disposable VM or management VM)**  
-
-   First, clone the repository and copy bootstrap scripts into your dom0 securely:
-    ```bash
-    git clone <your_repo_url>
-    cd QubesAIRouter
-
-    # Copy project to dom0 (run in your management VM)
-    qvm-copy-to-vm dom0 ~/QubesAIRouter
-    ```
-
-    Move it to a convenient location in dom0:
-    ```bash
-    # Now in dom0 terminal:
-    mv ~/QubesIncoming/<source_vm>/QubesAIRouter ~/QubesAIRouter
-    cd ~/QubesAIRouter
-
-    chmod +x bootstrap.sh teardown.sh
-    ```
-  
-2. **Review Configuration (Recommended)**  
-
-   Take a moment to review `config.sh` to verify your setup parameters, such as template names, VM labels, NetVMs, and VLAN/subnet details:
-    ```bash
-    vim config.sh
-    ```
-
-3. **Run the Bootstrap Script**
-
-   Execute the bootstrap script. Recommended to use `tee` to log the output:
-
-    ```bash
-    ./bootstrap.sh | tee bootstrap.log
-    ```
-
-   This will perform the following actions:
-   - Clone Templates
-   - Create and configure all custom VMs
-   - Configure NetVM assignments, GPU passthrough, and networking configurations
-   - Set up qrexec policies, DHCP, DNS, firewall, and AI inference environments
-   - Generate an asset registry (`assets.lst`) for easy teardown if necessary  
-
-   **Note:** The execution may take a few minutes, depending on your system and network speed.
-
-4. **Verify Installation**  
-   
-   Upon successful execution, you should see confirmation messages. Use the Qubes VM Manager to verify newly created VMs and their configurations.
-
-
-## ♻️ Reverting / Removing the Setup
-
-To fully remove all automatically created VMs and templates, simply run the teardown script provided:
-
-1. **Execute Teardown** in dom0:
-   ```bash
-   ./teardown.sh | tee teardown.log
-   ```
-   **Important:** The teardown process permanently deletes the VMs/templates listed in the `assets.lst` file generated during bootstrap. Ensure this is your intent before running. It's always recommended to backup essential data first.
+In dom0, create the isolated VM:
 
 ```bash
-./bootstrap.sh | tee bootstrap.log
+qvm-create sys-mgmt --template fedora-37 --label yellow --netvm none
 ```
 
-### 📓 Final Best Practice Recommendations:
+### 2. Install Ansible and Git (inside sys-mgmt):
+
+Open terminal within `sys-mgmt` and run:
+```bash
+sudo dnf install -y ansible git
+```
+
+Clone the repository inside `sys-mgmt`:
+```bash
+git clone <your_repo_url>
+cd QubesAIRouter
+```
+
+### 3. Setup Secure qrexec RPC from dom0 to sys-mgmt:
+
+In dom0, place the following qrexec rpc script in `/etc/qubes-rpc/dom0.exec_qvm_command`:
+
+```bash
+#!/bin/sh
+case "$1" in
+    qvm-create*|qvm-remove*|qvm-prefs*|qvm-clone*|qvm-pci*)
+        $1 ;;
+    *)
+        echo "Command Not Allowed" >&2
+        exit 1 ;;
+esac
+```
+
+Make executable:
+```bash
+sudo chmod +x /etc/qubes-rpc/dom0.exec_qvm_command
+```
+
+Policy file (`/etc/qubes-rpc/policy/dom0.exec_qvm_command`):
+```bash
+sys-mgmt dom0 allow
+```
+
+You can also copy the file created at `./config/qrexec/qrexec.config` into dom0 and rename it accordingly.
+
+### 4. Review Infrastructure configurations (`vars/main.yml`):
+
+Verify your infrastructure setup parameters (template names, networking, VLANs, GPU PCI, etc.):
+```bash
+vim vars/main.yml
+```
+
+### 5. Execute Bootstrap Playbook (from sys-mgmt terminal):
+
+Run Ansible bootstrap playbook, logging both output and errors clearly:
+```bash
+ansible-playbook -i inventory.ini playbooks/bootstrap.yml | tee bootstrap.log
+```
+
+**Note:** This execution could take several minutes depending on your hardware and network speed.
+
+### 6. Verify Installation:
+
+Check via Qubes Manager that your VMs created correctly, network assigned, GPU passthrough configured, etc.
+
+---
+
+## ♻️ Reverting/Removing the Setup
+
+To remove generated VM assets using the provided teardown playbook:
+```bash
+ansible-playbook -i inventory.ini playbooks/teardown.yml | tee teardown.log
+```
+
+**Important:** Teardown permanently removes VMs/assets. Always backup necessary information first.

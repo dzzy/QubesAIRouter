@@ -62,12 +62,12 @@ This section outlines the architecture for interconnections between VMs and the 
 
 - **Service Configuration Fetching:**
   ```bash
-  sys-dev sys-config sys-config.get-dev-config ask
-  sys-router sys-config sys-config.get-router-config ask
-  sys-dns sys-config sys-config.get-dns-config ask
-  sys-dhcp sys-config sys-config.get-dns-config ask
-  sys-vpn sys-config sys-config.get-vpn-config ask
-  sys-lan sys-config sys-config.get-lan-config ask
+sys-dev sys-config sys-config.get-dev-config ask
+sys-router sys-config sys-config.get-router-config ask
+sys-dns sys-config sys-config.get-dns-config ask
+sys-dhcp sys-config sys-config.get-dhcp-config ask 
+sys-vpn sys-config sys-config.get-vpn-config ask
+sys-lan sys-config sys-config.get-lan-config ask
   ```
 
 - **AI Command Execution:**

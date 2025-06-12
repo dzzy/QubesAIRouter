@@ -1,48 +1,29 @@
 #!/bin/bash
-# bootstrap.sh
+# teardown.sh — Remove assets created by bootstrap script
 
 set -e
 source ./config.sh
 
-ASSET_FILE="./assets.lst"
-
-# Backup existing asset file (if exists)
-if [[ -f "$ASSET_FILE" ]]; then
-    mv "$ASSET_FILE" "${ASSET_FILE}.$(date +%Y%m%d%H%M%S).bak"
+if [[ ! -f "$ASSET_FILE" ]]; then
+    echo "Asset file ($ASSET_FILE) not found!"
+    exit 1
 fi
 
-echo "# VM Templates" > $ASSET_FILE
-SERVICE_VMS=("$DNS_VM" "$DHCP_VM" "$VPN_VM" "$AI_VM" "$LAN_VM" "$ROUTER_VM" "$DEV_VM" "$CONFIG_VM")
-for VM in "${SERVICE_VMS[@]}"; do
-  TEMPLATE_NAME="${CUSTOM_TEMPLATE_PREFIX}${VM}"
-  qvm-clone "$BASE_TEMPLATE" "$TEMPLATE_NAME"
-  echo "$TEMPLATE_NAME" >> $ASSET_FILE
-done
+echo "WARNING: This will permanently delete VMs/templates from assets.lst"
+echo "Proceed? (y/N)"
+read choice
+[ "$choice" != "y" ] && echo "Aborted teardown." && exit 1
 
-echo -e "\n# AppVMs" >> $ASSET_FILE
-create_vm_with_netvm() {
-    local vm_name=$1
-    local template_name=$2
-    local label=$3
-    local class=$4
-    local netvm=$5
+# Remove VMs and templates listed in assets.lst
+while read -r asset; do
+  [[ -z "$asset" || "$asset" == \#* ]] && continue
+  if qvm-check "$asset" &>/dev/null; then
+      echo "Removing: $asset"
+      qvm-remove -f "$asset"
+  else
+      echo "Asset $asset does not exist, skipping."
+  fi
+done < "$ASSET_FILE"
 
-    qvm-create "$vm_name" --template "$template_name" --label "$label" --class "$class"
-    qvm-prefs "$vm_name" netvm "$netvm"
-
-    echo "$vm_name" >> $ASSET_FILE
-}
-
-# Example VM creation with logging:
-create_vm_with_netvm "$ROUTER_VM" "${CUSTOM_TEMPLATE_PREFIX}${ROUTER_VM}" "$LABEL_ROUTER" "AppVM" "$UPSTREAM_NETVM"
-create_vm_with_netvm "$DNS_VM" "${CUSTOM_TEMPLATE_PREFIX}${DNS_VM}" "$LABEL_SERVICE" "AppVM" "$ROUTER_VM"
-create_vm_with_netvm "$DHCP_VM" "${CUSTOM_TEMPLATE_PREFIX}${DHCP_VM}" "$LABEL_SERVICE" "AppVM" "$ROUTER_VM"
-create_vm_with_netvm "$VPN_VM" "${CUSTOM_TEMPLATE_PREFIX}${VPN_VM}" "$LABEL_SERVICE" "AppVM" "$ROUTER_VM"
-create_vm_with_netvm "$LAN_VM" "${CUSTOM_TEMPLATE_PREFIX}${LAN_VM}" "$LABEL_SERVICE" "AppVM" "$ROUTER_VM"
-create_vm_with_netvm "$AI_VM" "${CUSTOM_TEMPLATE_PREFIX}${AI_VM}" "$LABEL_AI" "HVM" "$ROUTER_VM"
-create_vm_with_netvm "$DEV_VM" "${CUSTOM_TEMPLATE_PREFIX}${DEV_VM}" "$LABEL_DEV" "AppVM" "$ROUTER_VM"
-create_vm_with_netvm "$CONFIG_VM" "${CUSTOM_TEMPLATE_PREFIX}${CONFIG_VM}" "$LABEL_CONFIG" "AppVM" "none"
-
-# PCI attachments, qrexec, firewall setup as before.
-
-echo "Bootstrap complete; assets saved to $ASSET_FILE"
+rm -f "$ASSET_FILE"
+echo "Teardown completed successfully."

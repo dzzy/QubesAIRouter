@@ -3,7 +3,8 @@
 ## 1. Create a Temporary Git Clone VM
 
 ```bash
-qvm-create sys-git --template fedora-41-xfce --label red --property netvm='sys-firewall'```
+qvm-create sys-git --template fedora-41-xfce --label red --property netvm='sys-firewall'
+```
 
 Start it and clone the repo inside:
 

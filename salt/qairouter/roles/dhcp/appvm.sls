@@ -1,4 +1,4 @@
-# salt/roles/dhcp/appvm.sls
+# salt/qairouter/roles/dhcp/appvm.sls
 
 qubes.vm:
   - name: dhcp-dvm

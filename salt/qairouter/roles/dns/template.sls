@@ -1,4 +1,4 @@
-# salt/roles/dns/template.sls
+# salt/qairouter/roles/dns/template.sls
 
 qubes.vm:
   - name: fedora-dns

@@ -1,4 +1,4 @@
-# /salt/roles/dns/init.sls
+# /salt/qairouter/roles/dns/init.sls
 
 include:
   - roles.dns.template

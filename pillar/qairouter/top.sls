@@ -1,4 +1,4 @@
-# pillar/top.sls
+# pillar/qairouter/top.sls
 # pillar/top defines which base receives access to which config files/secrets
 
 base:

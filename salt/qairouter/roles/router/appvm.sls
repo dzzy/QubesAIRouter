@@ -1,4 +1,4 @@
-# /salt/roles/router/appvm.sls
+# /salt/qaurouter/roles/router/appvm.sls
 
 qubes.vm:
   - name: sys-router

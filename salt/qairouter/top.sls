@@ -1,4 +1,4 @@
-# salt/top.sls
+# salt/qairouter/top.sls
 
 base:
   dom0:

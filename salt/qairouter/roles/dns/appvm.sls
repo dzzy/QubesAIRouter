@@ -1,4 +1,4 @@
-# salt/roles/dns/appvm.sls
+# salt/qairouter/roles/dns/appvm.sls
 
 qubes.vm:
   - name: dns-dvm

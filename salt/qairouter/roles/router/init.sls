@@ -1,4 +1,4 @@
-# /salt/roles/router/init.sls
+# /salt/qairouter/roles/router/init.sls
 
 include:
   - roles.router.template

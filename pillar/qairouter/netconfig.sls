@@ -1,4 +1,4 @@
-#/pillar/netconfig.sls 
+#/pillar/qairouter/netconfig.sls 
 subnets:
   dns: 
     vif: vif-dns

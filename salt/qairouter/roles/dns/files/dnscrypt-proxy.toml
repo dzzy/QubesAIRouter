@@ -1,3 +1,5 @@
+# /salt/qairouter/roles/dns/files/dnscrypt-proxy.toml
+
 server_names = ['cloudflare', 'quad9-doh']
 listen_addresses = ['127.0.0.1:5353']
 max_clients = 250

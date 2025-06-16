@@ -1,4 +1,4 @@
-# /salt/roles/router/router-template.sls
+# /salt/qairouter/roles/router/router-template.sls
 
 qubes.vm:
   - name: fedora-router

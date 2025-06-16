@@ -3,8 +3,7 @@
 ## 1. Create a Temporary Git Clone VM
 
 ```bash
-qvm-create sys-git --template fedora-37 --label green --netvm sys-net
-```
+qvm-create sys-git --template fedora-41-xfce --label red --property netvm='sys-firewall'```
 
 Start it and clone the repo inside:
 
@@ -16,14 +15,14 @@ qvm-run -p sys-git 'git clone https://github.com/dzzy/QubesAIRouter ~/QubesAIRou
 
 Salt states are in `~/QubesAIRouter/salt` and `~/QubesAIRouter/pillar` in `sys-git`.
 
-Use `qvm-run` or `qvm-copy` to move files:
+Use `qvm-run` to move files to dom0 in /tmp/:
 
 ```bash
 qvm-run -p sys-git 'tar -czf /home/user/salt_bundle.tar.gz -C ~/QubesAIRouter salt pillar'
 qvm-run --pass-io sys-git 'cat /home/user/salt_bundle.tar.gz' > /tmp/salt_bundle.tar.gz
 ```
 
-Then in `dom0`:
+Then extract in `dom0`:
 
 ```bash
 sudo mkdir -p /srv/salt /srv/pillar

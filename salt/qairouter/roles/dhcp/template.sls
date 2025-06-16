@@ -1,4 +1,4 @@
-# salt/roles/dhcp/template.sls
+# salt/qairouter/roles/dhcp/template.sls
 
 qubes.vm:
   - name: fedora-dhcp

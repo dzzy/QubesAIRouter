@@ -1,10 +1,10 @@
 # Qubes AI Router
 
-## 🚀 Getting Started
+## Getting Started
 
 See [INSTALLATION.md](./INSTALLATION.md) for instructions on bootstrapping your Qubes AI Router.
 
-## 🌟 Benefits and Philosophy
+## Benefits and Philosophy
 
 This project provides a secure, modular, and powerful AI-assisted security router environment built on [Qubes OS](https://www.qubes-os.org/intro/). It combines cutting-edge AI with strong security practices that respect your privacy while delivering robust automation and analysis capabilities.
 
@@ -21,7 +21,7 @@ Key advantages include:
 - **Attack Path Mitigation**: Segregating services contains common attack vectors within their respective Qubes, preserving system integrity.
 - **Salt Stack**: VM creation, state management ensuring compatibility with Qubes
 
-## 🏗️ VM Architecture Overview
+## VM Architecture Overview
 
 | VM Name     | Purpose                                    
 |-------------|--------------------------------------------
@@ -38,15 +38,40 @@ Key advantages include:
 
 ## State and Log Management
 
-On startup, service VMs pull their state data (DHCP leases, DNS filter lists, etc.) from sys-state
+This architecture uses Qubes OS’s isolation model to enforce strict separation between volatile and persistent data, while still enabling automated stateful operation and centralized AI-assisted log analysis.
 
-Sys-log receives logs from disposable VMs
+### 🔐 State Persistence
 
-Sys-dev pushes logs from sys-state to sys-ai for analysis.
+- **sys-state** acts as the authoritative Git-managed storage VM. It holds:
+  - DHCP lease files
+  - DNS blocklists
 
-## 🔗 Inter-VM Connectivity Architecture
+- Disposable service VMs (**sys-dns**, **sys-dhcp**, **sys-router**, etc.) **pull their runtime configuration** from `sys-state` at boot via controlled qrexec calls.
+- Updates to state (e.g., a new DHCP lease or modified blocklist) are written back to `sys-state` using secure qrexec write endpoints.
+- All state files are versioned using Git to ensure auditability and rollback capability.
+
+### 📦 Log Collection & Routing
+
+- **sys-log** is a dedicated VM that receives logs from all other service VMs via qrexec-based push channels.
+- Logs are tagged with VM identifiers and timestamps upon arrival to facilitate later indexing and correlation.
+
+- **sys-dev** acts as a mediator, pulling log data from `sys-log` and pushing it to `sys-ai` for inference. This isolates raw logs from AI analysis for stronger compartmentalization.
+
+- Logs may include:
+  - DNS query patterns
+  - DHCP assignment history
+  - Systemd/journal entries from critical services
+
+### 🧠 Integration with AI Inference
+
+
+## Inter-VM Connectivity Architecture
 
 This section outlines the architecture for interconnections between VMs and the qrexec services facilitating secure interactions.
+
+- All inter-VM transfers (state, logs, config) use **qrexec services** explicitly defined with minimal privileges.
+- `sys-state` and `sys-log` are **persistent, non-networked VMs** to reduce exposure.
+- Service VMs are DisposableVMs by default, ensuring clean state and no lingering traces between reboots.
 
 ### Key Inter-VM Connections:
 
@@ -69,3 +94,6 @@ This section outlines the architecture for interconnections between VMs and the 
 5. **AI Predictions and Inference:**
    - **sys-ai** handles AI inference tasks, using GPU acceleration through PCI passthrough.
    - Commands and data for AI processing are sent from **sys-dev** using qrexec services.
+   - `sys-ai` never accesses service VMs directly.
+   - Instead, `sys-dev` formulates context-rich queries or summaries and invokes inference using LangChain-style prompts.
+   - Resulting insights are returned to `sys-dev` for presentation, rule updates, or alerting.

@@ -1,5 +1,9 @@
 # Qubes AI Router
 
+## 🚀 Getting Started
+
+See [INSTALLATION.md](./INSTALLATION.md) for instructions on bootstrapping your Qubes AI Router.
+
 ## 🌟 Benefits and Philosophy
 
 This project provides a secure, modular, and powerful AI-assisted security router environment built on [Qubes OS](https://www.qubes-os.org/intro/). It combines cutting-edge AI with strong security practices that respect your privacy while delivering robust automation and analysis capabilities.
@@ -24,15 +28,21 @@ Key advantages include:
 | dom0        | Qubes management domain; oversees VM lifecycle, security policies, and system updates
 | sys-ai      | Inference engine running Ollama + GPU passthrough (Phi3, Mistral, etc.)
 | sys-dev     | Development environment with VS Code, LangChain, scripting tools, API calls to sys-ai
-| sys-state   | Centralized storage for all persistent data: DHCP leases, DNS filter lists, etc. in a Git-managed repo
+| sys-state   | Centralized storage for all persistent data: DHCP leases, DNS filter lists in a Git-managed repo
+| sys-log     | Log ingestion from disposable VMs
 | sys-router  | Disposable Gateway VM for traffic routing (DHCP, DNS, VPN, VLANs)
 | sys-dns     | Disposable DNS server VM
 | sys-dhcp    | Disposable DHCP server VM
 | sys-vpn     | Disposable VPN VM (optional)
 | sys-vlan    | Disposable NetVM handling VLAN tagging
 
-On startup, service VMs pull their state data from sys-state
-sys-dev pushes logs from sys-state to sys-ai for analysis.
+## State and Log Management
+
+On startup, service VMs pull their state data (DHCP leases, DNS filter lists, etc.) from sys-state
+
+Sys-log receives logs from disposable VMs
+
+Sys-dev pushes logs from sys-state to sys-ai for analysis.
 
 ## 🔗 Inter-VM Connectivity Architecture
 

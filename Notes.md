@@ -1,4 +1,3 @@
-
 ### 🛠️ Hardware and Virtualization Setup
 - Use an NVIDIA 30xx+ GPU for best compatibility with CUDA 12.
 - Pass through the GPU (and audio controller) to a dedicated HVM-based `sys-ai` VM.
@@ -23,8 +22,6 @@
 
 
 # Configuration Overview
-
-  ```
 
 ### Setting Up qrexec Policies and Services ###
 1. **Define Custom qrexec Services:**  

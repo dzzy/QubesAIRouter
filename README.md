@@ -40,7 +40,7 @@ Key advantages include:
 
 This architecture uses Qubes OS’s isolation model to enforce strict separation between volatile and persistent data, while still enabling automated stateful operation and centralized AI-assisted log analysis.
 
-### 🔐 State Persistence
+### State Persistence
 
 - **sys-state** acts as the authoritative Git-managed storage VM. It holds:
   - DHCP lease files
@@ -50,7 +50,7 @@ This architecture uses Qubes OS’s isolation model to enforce strict separation
 - Updates to state (e.g., a new DHCP lease or modified blocklist) are written back to `sys-state` using secure qrexec write endpoints.
 - All state files are versioned using Git to ensure auditability and rollback capability.
 
-### 📦 Log Collection & Routing
+### Log Collection & Routing
 
 - **sys-log** is a dedicated VM that receives logs from all other service VMs via qrexec-based push channels.
 - Logs are tagged with VM identifiers and timestamps upon arrival to facilitate later indexing and correlation.
@@ -62,7 +62,7 @@ This architecture uses Qubes OS’s isolation model to enforce strict separation
   - DHCP assignment history
   - Systemd/journal entries from critical services
 
-### 🧠 Integration with AI Inference
+### Integration with AI Inference
 
 
 ## Inter-VM Connectivity Architecture

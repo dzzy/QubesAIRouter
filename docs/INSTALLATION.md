@@ -1,6 +1,6 @@
 # Installation
 
-Save the [Install Script](./scripts/install.sh) as `install.sh` and run from dom0 after making executable with `chmod +x install.sh`
+Save the [Install Script](../scripts/install.sh) as `install.sh` and run from dom0 after making executable with `chmod +x install.sh`
 
 ```bash
 #!/bin/bash

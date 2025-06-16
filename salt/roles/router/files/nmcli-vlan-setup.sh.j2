@@ -1,8 +1,0 @@
-#!/bin/bash
-# VLAN setup script
-# /salt/roles/router/files/nmcli-vlan-setup.sh.j2
-
-{% for vlan, config in pillar['router']['subnets'].items() %}
-echo "Configuring {{ config.vif }}"
-nmcli con add type ethernet ifname {{ config.vif }} con-name {{ config.vif }} autoconnect yes
-{% endfor %}

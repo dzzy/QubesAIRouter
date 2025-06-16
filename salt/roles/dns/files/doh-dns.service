@@ -1,0 +1,11 @@
+[Unit]
+Description=Start dnscrypt-proxy and dnsmasq
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/dnscrypt-proxy -config /rw/config/dnscrypt-proxy.toml
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

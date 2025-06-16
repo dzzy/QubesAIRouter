@@ -41,7 +41,7 @@ sudo qubesctl state.apply
 Or apply individual modules:
 
 ```bash
-sudo qubesctl state.apply vm.sys-router
+sudo qubesctl state.apply roles.router.template
 ```
 
 ## 4. Unpack the Repository Automatically with Salt

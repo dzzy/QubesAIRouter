@@ -14,7 +14,7 @@ Key advantages include:
 - **Anomaly Detection**: Continuous log parsing and contextual analysis detect suspicious activity in real time.
 - **Self-Sovereign Intelligence**: Your data and insights remain yours—no third-party services or data sharing.
 - **Isolated Interactions**: VMs communicate only through controlled interfaces (like Qubes qrexec services and API endpoints), with no direct device or file sharing. This limits lateral movement even if one VM is compromised.
-- **Attack Path Mitigation**: Segregating services contains common attack vectors within their respective VMs, preserving system integrity.
+- **Attack Path Mitigation**: Segregating services contains common attack vectors within their respective VMs, preservin  g system integrity.
 - **Salt Stack**: Salt stack ensures compatibility with Qubes and reliable configuration management
 
 ## 🏗️ VM Architecture Overview

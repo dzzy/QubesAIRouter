@@ -1,0 +1,15 @@
+#!/bin/bash
+# VLAN setup script
+# /salt/roles/router/files/nmcli-vlan-setup.sh.j2
+
+{% set dns_ip = pillar['dns']['ip'] %}
+{% for vlan, config in pillar['subnets'].items() %}
+echo "Configuring {{ config.vif }}"
+nmcli con add type ethernet ifname {{ config.vif }} con-name {{ config.vif }} autoconnect yes
+{% set subnet_parts = config.subnet.split('/') %}
+{% set ip_base = subnet_parts[0].rsplit('.', 1)[0] %}
+{% set gateway_ip = ip_base + '.1' %}
+nmcli con mod {{ config.vif }} ipv4.method manual ipv4.addresses {{ gateway_ip }}/{{ subnet_parts[1] }} ipv4.gateway {{ gateway_ip }} ipv4.dns "{{ dns_ip }}"
+nmcli con up {{ config.vif }}
+
+{% endfor %}

@@ -1,0 +1,28 @@
+server_names = ['cloudflare', 'quad9-doh']
+listen_addresses = ['127.0.0.1:5353']
+max_clients = 250
+
+ipv4_servers = true
+require_dnssec = true
+require_nolog = true
+require_nofilter = true
+block_ipv6 = true
+timeout = 3000
+
+[query_log]
+  file = '/var/log/dnscrypt-proxy/query.log'
+  format = 'tsv'
+
+[blocked_names]
+  blocked_names_file = '/etc/dnscrypt-proxy/blocked-names.txt'
+
+[sources]
+  [sources.public-resolvers]
+  urls = ['https://download.dnscrypt.info/resolvers-list/v3/public-resolvers.md']
+  cache_file = 'public-resolvers.md'
+  minisign_key = 'RWQe8f/u37...'
+  refresh_delay = 72
+  prefix = ''
+
+[listen_addresses]
+  listen_addresses = ['127.0.0.1:5353']

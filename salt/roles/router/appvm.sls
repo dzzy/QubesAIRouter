@@ -4,7 +4,7 @@ qubes.vm:
   - name: sys-router
   - present: True
   - template: fedora-router
-  - label: red
+  - label: yellow
   - netvm: sys-net
   - provides_network: True
 
@@ -17,7 +17,7 @@ qubes.vm.tag:
 qubes.vm.file:
   - name: /rw/config/nmcli-vlan-setup.sh
   - vm: sys-router
-  - source: salt://roles/router/files/nmcli-vlan-setup.sh.j2
+  - source: salt://roles/router/files/router-setup.sh.j2
   - template: jinja
   - context:
       vifs: {{ pillar['router']['subnets'] }}

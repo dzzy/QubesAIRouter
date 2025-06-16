@@ -2,7 +2,7 @@
 
 ## Getting Started
 
-See for instructions on bootstrapping your Qubes AI Router.
+See [Installation](./docs/INSTALLATION.md) for instructions on bootstrapping your Qubes AI Router.
 
 ## Benefits and Philosophy
 
